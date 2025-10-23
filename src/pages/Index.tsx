@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 const PRIVILEGES = [
@@ -25,6 +29,20 @@ const BUSINESSES = [
   { id: 5, name: 'Официальная лучшая работа с прибылью 50000/Сек', price: 500000, profit: 100000, emoji: '💎' },
 ];
 
+const SPORT_CARS = [
+  { id: 1, name: 'Ferrari 488', price: 50000000, emoji: '🏎️', type: 'sport' },
+  { id: 2, name: 'Lamborghini Aventador', price: 75000000, emoji: '🏎️', type: 'sport' },
+  { id: 3, name: 'Porsche 911 Turbo', price: 35000000, emoji: '🏎️', type: 'sport' },
+  { id: 4, name: 'McLaren 720S', price: 60000000, emoji: '🏎️', type: 'sport' },
+];
+
+const REGULAR_CARS = [
+  { id: 5, name: 'Toyota Camry', price: 5000000, emoji: '🚗', type: 'regular' },
+  { id: 6, name: 'BMW 5 Series', price: 12000000, emoji: '🚗', type: 'regular' },
+  { id: 7, name: 'Mercedes E-Class', price: 15000000, emoji: '🚗', type: 'regular' },
+  { id: 8, name: 'Audi A6', price: 13000000, emoji: '🚗', type: 'regular' },
+];
+
 export default function Index() {
   const { toast } = useToast();
   const playerId = useMemo(() => `ID${Math.floor(Math.random() * 900000 + 100000)}`, []);
@@ -35,6 +53,13 @@ export default function Index() {
   const [businessProfit, setBusinessProfit] = useState(0);
   const [lastClick, setLastClick] = useState(0);
   const [coinAnimation, setCoinAnimation] = useState(false);
+  const [ownedCars, setOwnedCars] = useState<number[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLogin, setAdminLogin] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminGiveAmount, setAdminGiveAmount] = useState('');
+  const [adminGiveType, setAdminGiveType] = useState<'coins' | 'donate' | 'privilege'>('coins');
+  const [adminSelectedPrivilege, setAdminSelectedPrivilege] = useState(PRIVILEGES[0].name);
 
   const formatNumber = (num: number) => {
     return num.toLocaleString('ru-RU');
@@ -146,6 +171,88 @@ export default function Index() {
     }
   };
 
+  const buyCar = (car: typeof SPORT_CARS[0] | typeof REGULAR_CARS[0]) => {
+    if (balance < car.price) {
+      toast({
+        title: '❌ Недостаточно монет',
+        description: `Нужно ${formatNumber(car.price)} монет`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (ownedCars.includes(car.id)) {
+      toast({
+        title: '❌ Уже куплено',
+        description: 'У тебя уже есть эта машина',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setBalance(prev => prev - car.price);
+    setOwnedCars(prev => [...prev, car.id]);
+    
+    toast({
+      title: '🎉 Машина куплена!',
+      description: `${car.emoji} ${car.name}`,
+    });
+  };
+
+  const handleAdminLogin = () => {
+    if (adminLogin === 'KosmoCat' && adminPassword === 'KosmoCat') {
+      setIsAdmin(true);
+      toast({
+        title: '👑 Вход выполнен',
+        description: 'Добро пожаловать, администратор!',
+      });
+      setAdminLogin('');
+      setAdminPassword('');
+    } else {
+      toast({
+        title: '❌ Неверные данные',
+        description: 'Проверь логин и пароль',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const adminGiveReward = () => {
+    const amount = parseInt(adminGiveAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: '❌ Неверная сумма',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (adminGiveType === 'coins') {
+      setBalance(prev => prev + amount);
+      toast({
+        title: '💰 Монеты выданы',
+        description: `+${formatNumber(amount)} монет`,
+      });
+    } else if (adminGiveType === 'donate') {
+      setDonateBalance(prev => prev + amount);
+      toast({
+        title: '💎 Донат валюта выдана',
+        description: `+${formatNumber(amount)} донат валюты`,
+      });
+    } else if (adminGiveType === 'privilege') {
+      const selectedPriv = PRIVILEGES.find(p => p.name === adminSelectedPrivilege);
+      if (selectedPriv) {
+        setPrivilege(selectedPriv);
+        toast({
+          title: '🎖️ Привилегия выдана',
+          description: `Установлена привилегия ${selectedPriv.name}`,
+        });
+      }
+    }
+
+    setAdminGiveAmount('');
+  };
+
   const progressToNext = () => {
     const currentIndex = PRIVILEGES.indexOf(privilege);
     if (currentIndex === PRIVILEGES.length - 1) return 100;
@@ -156,11 +263,49 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="text-center space-y-2 animate-fade-in">
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            💸 GAMING BOT
-          </h1>
-          <p className="text-muted-foreground text-lg">Кликай, зарабатывай, развивайся!</p>
+        <div className="flex justify-between items-center animate-fade-in">
+          <div className="text-center flex-1 space-y-2">
+            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              💸 GAMING BOT
+            </h1>
+            <p className="text-muted-foreground text-lg">Кликай, зарабатывай, развивайся!</p>
+          </div>
+          {!isAdmin && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="bg-primary/10 border-primary/30">
+                  👑 Админ
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>👑 Вход для администратора</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Логин</Label>
+                    <Input
+                      value={adminLogin}
+                      onChange={(e) => setAdminLogin(e.target.value)}
+                      placeholder="Введи логин"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Пароль</Label>
+                    <Input
+                      type="password"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="Введи пароль"
+                    />
+                  </div>
+                  <Button onClick={handleAdminLogin} className="w-full">
+                    Войти
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
@@ -202,11 +347,13 @@ export default function Index() {
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-muted">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'} bg-muted`}>
             <TabsTrigger value="profile">👤 Профиль</TabsTrigger>
             <TabsTrigger value="business">🏢 Бизнес</TabsTrigger>
+            <TabsTrigger value="cars">🏎️ Машины</TabsTrigger>
             <TabsTrigger value="casino">🎰 Казино</TabsTrigger>
             <TabsTrigger value="help">❓ Помощь</TabsTrigger>
+            {isAdmin && <TabsTrigger value="admin">👑 Админ</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -222,12 +369,28 @@ export default function Index() {
                   <p className="text-xl font-bold">{privilege.name}</p>
                 </div>
                 <div className="space-y-2">
+                  <p className="text-muted-foreground">Баланс</p>
+                  <p className="text-xl font-bold text-primary">{formatNumber(balance)} 💰</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">Донат валюта</p>
+                  <p className="text-xl font-bold text-accent">{formatNumber(donateBalance)} 💎</p>
+                </div>
+                <div className="space-y-2">
                   <p className="text-muted-foreground">Бизнесов</p>
                   <p className="text-xl font-bold">{ownedBusinesses.length} / 5</p>
                 </div>
                 <div className="space-y-2">
+                  <p className="text-muted-foreground">Машин</p>
+                  <p className="text-xl font-bold">{ownedCars.length} / {SPORT_CARS.length + REGULAR_CARS.length}</p>
+                </div>
+                <div className="space-y-2">
                   <p className="text-muted-foreground">Доход в секунду</p>
                   <p className="text-xl font-bold text-accent">{formatNumber(businessProfit)} 💰</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">Статус</p>
+                  <p className="text-xl font-bold">{isAdmin ? '👑 Администратор' : '👤 Игрок'}</p>
                 </div>
               </div>
             </Card>
@@ -305,6 +468,90 @@ export default function Index() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="cars" className="space-y-4">
+            <h2 className="text-2xl font-bold">🏎️ Автосалон</h2>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-secondary">🏎️ Спортивные автомобили</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {SPORT_CARS.map(car => (
+                    <Card
+                      key={car.id}
+                      className={`p-6 space-y-4 transition-all duration-300 ${
+                        ownedCars.includes(car.id)
+                          ? 'bg-gradient-to-br from-secondary/20 to-accent/20 border-secondary'
+                          : 'hover:border-secondary/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <p className="text-4xl">{car.emoji}</p>
+                          <p className="font-bold text-lg">{car.name}</p>
+                        </div>
+                        {ownedCars.includes(car.id) && (
+                          <Badge variant="secondary">✅ В гараже</Badge>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Цена:</span>
+                          <span className="font-bold text-secondary">{formatNumber(car.price)} 💰</span>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => buyCar(car)}
+                        disabled={ownedCars.includes(car.id)}
+                        className="w-full bg-gradient-to-r from-secondary to-accent hover:from-secondary/90 hover:to-accent/90"
+                      >
+                        {ownedCars.includes(car.id) ? '✅ Куплено' : '🏎️ Купить'}
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-primary">🚗 Обычные автомобили</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {REGULAR_CARS.map(car => (
+                    <Card
+                      key={car.id}
+                      className={`p-6 space-y-4 transition-all duration-300 ${
+                        ownedCars.includes(car.id)
+                          ? 'bg-gradient-to-br from-primary/20 to-accent/20 border-primary'
+                          : 'hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <p className="text-4xl">{car.emoji}</p>
+                          <p className="font-bold text-lg">{car.name}</p>
+                        </div>
+                        {ownedCars.includes(car.id) && (
+                          <Badge variant="secondary">✅ В гараже</Badge>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Цена:</span>
+                          <span className="font-bold text-primary">{formatNumber(car.price)} 💰</span>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => buyCar(car)}
+                        disabled={ownedCars.includes(car.id)}
+                        className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                      >
+                        {ownedCars.includes(car.id) ? '✅ Куплено' : '🚗 Купить'}
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="help" className="space-y-4">
             <Card className="p-6 space-y-4">
               <h2 className="text-2xl font-bold">❓ Команды и справка</h2>
@@ -318,6 +565,10 @@ export default function Index() {
                   <p className="text-sm text-muted-foreground">Покупай бизнесы для пассивного дохода</p>
                 </div>
                 <div className="p-4 bg-muted rounded-lg">
+                  <p className="font-bold">🏎️ Машины</p>
+                  <p className="text-sm text-muted-foreground">Собирай коллекцию спортивных и обычных автомобилей</p>
+                </div>
+                <div className="p-4 bg-muted rounded-lg">
                   <p className="font-bold">🎰 Казино</p>
                   <p className="text-sm text-muted-foreground">Рискуй монетами для быстрого заработка</p>
                 </div>
@@ -328,6 +579,83 @@ export default function Index() {
               </div>
             </Card>
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="admin" className="space-y-4">
+              <Card className="p-6 space-y-6 bg-gradient-to-br from-primary/10 to-secondary/10 border-primary">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">👑 Админ панель</h2>
+                  <Badge variant="secondary" className="text-lg px-4 py-2">
+                    Администратор
+                  </Badge>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Тип награды</Label>
+                    <Select value={adminGiveType} onValueChange={(v: 'coins' | 'donate' | 'privilege') => setAdminGiveType(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="coins">💰 Монеты</SelectItem>
+                        <SelectItem value="donate">💎 Донат валюта</SelectItem>
+                        <SelectItem value="privilege">🎖️ Привилегия</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {adminGiveType === 'privilege' ? (
+                    <div className="space-y-2">
+                      <Label>Выбери привилегию</Label>
+                      <Select value={adminSelectedPrivilege} onValueChange={setAdminSelectedPrivilege}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRIVILEGES.map(priv => (
+                            <SelectItem key={priv.name} value={priv.name}>
+                              {priv.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Количество</Label>
+                      <Input
+                        type="number"
+                        value={adminGiveAmount}
+                        onChange={(e) => setAdminGiveAmount(e.target.value)}
+                        placeholder="Введи количество"
+                      />
+                    </div>
+                  )}
+
+                  <Button onClick={adminGiveReward} className="w-full bg-gradient-to-r from-primary to-secondary">
+                    ✨ Выдать награду
+                  </Button>
+
+                  <div className="pt-4 border-t border-border">
+                    <Button 
+                      onClick={() => {
+                        setIsAdmin(false);
+                        toast({
+                          title: '👋 Выход',
+                          description: 'До встречи, администратор!',
+                        });
+                      }}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Выйти из админ панели
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
