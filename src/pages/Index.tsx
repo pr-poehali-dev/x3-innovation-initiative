@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -27,6 +27,7 @@ const BUSINESSES = [
 
 export default function Index() {
   const { toast } = useToast();
+  const playerId = useMemo(() => `ID${Math.floor(Math.random() * 900000 + 100000)}`, []);
   const [balance, setBalance] = useState(0);
   const [donateBalance, setDonateBalance] = useState(0);
   const [privilege, setPrivilege] = useState(PRIVILEGES[0]);
@@ -214,7 +215,7 @@ export default function Index() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <p className="text-muted-foreground">ID игрока</p>
-                  <p className="text-xl font-bold">#95E1D3</p>
+                  <p className="text-xl font-bold">#{playerId}</p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-muted-foreground">Привилегия</p>
